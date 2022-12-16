@@ -56,24 +56,37 @@ public class UserController : ControllerBase
         var user = await _userService.CreateUser(createUserDto);
         
         var userDto = _mapper.Map<UserDto>(user);
-        
-        return Ok(userDto);
+
+        return CreatedAtAction(nameof(GetOne), new { userId = user.UserId }, userDto);
     }
 
-    private static string GeneratePassword(int length = 6)
+    [HttpPut]
+    public async Task<IActionResult> Update([FromBody] UpdateUserDto updateUserDto)
     {
-        var random = new Random();
-        var result = "";
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == updateUserDto.UserId);
 
-        while (result.Length < length)
+        if (user == null)
         {
-            var n = random.Next();
-            if ((47 < n && n < 58) || (64 < n && n < 91) || (96 < n && n < 123))
-            {
-                result += Convert.ToChar(n);
-            }
+            return NotFound("Пользователь не найден");
         }
 
-        return result;
+        var updatedUser = await _userService.UpdateUser(user, updateUserDto);
+
+        return Ok(_mapper.Map<UserDto>(updatedUser));
+    }
+
+    [HttpDelete("{userId}")]
+    public async Task<IActionResult> Delete(Guid userId)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user == null)
+        {
+            return NotFound("Пользователь не найден");
+        }
+
+        await _userService.DeleteUser(user);
+
+        return NoContent();
     }
 }

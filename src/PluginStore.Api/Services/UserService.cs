@@ -21,15 +21,13 @@ public class UserService : IUserService
 
     public async Task<User> CreateUser(CreateUserDto userDto)
     {
+        var user = _mapper.Map<User>(userDto);
+        
         var password = userDto.Password ?? GeneratePassword();
 
         using var hmac = new HMACSHA512();
-        var salt = hmac.Key;
-        var passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-
-        var user = _mapper.Map<User>(userDto);
-        user.PasswordHash = passwordHash;
-        user.PasswordSalt = salt;
+        user.PasswordSalt = hmac.Key;
+        user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
@@ -38,6 +36,32 @@ public class UserService : IUserService
         Console.WriteLine(password);
         
         return user;
+    }
+
+    public async Task<User> UpdateUser(User user, UpdateUserDto userDto)
+    {
+        user.Name = userDto.Name ?? user.Name;
+        user.Email = userDto.Email ?? user.Email;
+        user.LicenseNumber = userDto.LicenseNumber ?? user.LicenseNumber;
+        user.Role = userDto.Role ?? user.Role;
+
+        if (userDto.Password != null)
+        {
+            using var hmac = new HMACSHA512();
+            user.PasswordSalt = hmac.Key;
+            user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(userDto.Password));
+        }
+
+        _dbContext.Users.Update(user);
+        await _dbContext.SaveChangesAsync();
+
+        return user;
+    }
+
+    public async Task DeleteUser(User user)
+    {
+        _dbContext.Users.Remove(user);
+        await _dbContext.SaveChangesAsync();
     }
 
     private static string GeneratePassword(int length = 6)
