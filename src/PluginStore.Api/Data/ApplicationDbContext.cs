@@ -10,4 +10,6 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<Plugin> Plugins { get; set; }
+    public DbSet<PluginVersion> PluginVersions { get; set; }
 }
