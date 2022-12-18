@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace PluginStore.Api.Models;
@@ -11,6 +12,26 @@ public static class Roles
     public const string ExpertDeveloper = "Эксперт разработчик";
     public const string Operator = "Оператор";
     public const string Administrator = "Администратор";
+}
+
+public class RoleAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        var role = value as string;
+
+        return role switch
+        {
+            Roles.SubsoilUser => ValidationResult.Success,
+            Roles.DesignInstitute => ValidationResult.Success,
+            Roles.ProjectAuthor => ValidationResult.Success,
+            Roles.ExpertGeologist => ValidationResult.Success,
+            Roles.ExpertDeveloper => ValidationResult.Success,
+            Roles.Operator => ValidationResult.Success,
+            Roles.Administrator => ValidationResult.Success,
+            _ => new ValidationResult("Недопустимая роль")
+        };
+    }
 }
 
 [Index(nameof(Email), IsUnique = true)]

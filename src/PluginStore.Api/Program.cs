@@ -51,6 +51,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
+if (args.Contains("/seed"))
+{
+    Console.WriteLine("Seeding database...");
+    SeedData.EnsureSeedData(app);
+    Console.WriteLine("Done seeding database. Exiting.");
+    return;
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

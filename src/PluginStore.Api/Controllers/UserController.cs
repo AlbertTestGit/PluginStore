@@ -1,7 +1,10 @@
+using System.Security.Claims;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PluginStore.Api.Data;
+using PluginStore.Api.Models;
 using PluginStore.Api.Models.Dto;
 using PluginStore.Api.Services.Interfaces;
 
@@ -44,6 +47,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = $"{Roles.Administrator}, {Roles.Operator}")]
     public async Task<IActionResult> Create([FromBody] CreateUserDto createUserDto)
     {
         var candidate = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == createUserDto.Email);
@@ -51,6 +55,13 @@ public class UserController : ControllerBase
         if (candidate != null)
         {
             return BadRequest("Пользователь с таким email уже существует");
+        }
+        
+        var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value!;
+        
+        if (role == Roles.Operator && createUserDto.Role == Roles.Administrator)
+        {
+            return BadRequest("Оператор не может дать роль администратора");
         }
 
         var user = await _userService.CreateUser(createUserDto);
@@ -61,13 +72,38 @@ public class UserController : ControllerBase
     }
 
     [HttpPut]
+    [Authorize]
     public async Task<IActionResult> Update([FromBody] UpdateUserDto updateUserDto)
     {
+        var userId = Guid.Parse(User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!);
+        var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value!;
+        var isAdminOrOperator = role is Roles.Administrator or Roles.Operator;
+        
+        if (userId != updateUserDto.UserId && !isAdminOrOperator)
+        {
+            return Forbid();
+        }
+        
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == updateUserDto.UserId);
 
         if (user == null)
         {
             return NotFound("Пользователь не найден");
+        }
+        
+        if (!isAdminOrOperator)
+        {
+            updateUserDto.Role = null;
+        }
+
+        if (role == Roles.Operator && updateUserDto.Role == Roles.Administrator)
+        {
+            return BadRequest("Оператор не может дать роль администратора");
+        }
+
+        if (role == Roles.Operator && user.Role == Roles.Administrator)
+        {
+            return BadRequest("Оператор не может изменить учетные данные администратора");
         }
 
         var updatedUser = await _userService.UpdateUser(user, updateUserDto);
@@ -76,6 +112,7 @@ public class UserController : ControllerBase
     }
 
     [HttpDelete("{userId}")]
+    [Authorize(Roles = $"{Roles.Administrator}, {Roles.Operator}")]
     public async Task<IActionResult> Delete(Guid userId)
     {
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == userId);

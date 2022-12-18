@@ -11,6 +11,8 @@ public class CreateUserDto
     [EmailAddress]
     public string Email { get; set; } = string.Empty;
     public string? LicenseNumber { get; set; }
+    
+    [Role]
     public string? Role { get; set; } = Roles.SubsoilUser;
     public string? Password { get; set; }
 }
