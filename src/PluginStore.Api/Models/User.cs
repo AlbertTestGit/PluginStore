@@ -12,6 +12,7 @@ public static class Roles
     public const string ExpertDeveloper = "Эксперт разработчик";
     public const string Operator = "Оператор";
     public const string Administrator = "Администратор";
+    public const string Developer = "Разработчик";
 }
 
 public class RoleAttribute : ValidationAttribute
@@ -29,6 +30,7 @@ public class RoleAttribute : ValidationAttribute
             Roles.ExpertDeveloper => ValidationResult.Success,
             Roles.Operator => ValidationResult.Success,
             Roles.Administrator => ValidationResult.Success,
+            Roles.Developer => ValidationResult.Success,
             _ => new ValidationResult("Недопустимая роль")
         };
     }

@@ -11,5 +11,7 @@ public class AppMappingProfile : Profile
         CreateMap<User, UserDto>().ReverseMap();
         CreateMap<RegisterDto, CreateUserDto>();
         CreateMap<CreateUserDto, User>();
+        CreateMap<PluginVersion, PluginVersionDto>();
+        CreateMap<Plugin, PluginDto>();
     }
 }

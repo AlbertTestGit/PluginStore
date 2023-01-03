@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +13,20 @@ namespace PluginStore.Api.Controllers;
 public class PluginController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMapper _mapper;
+    private readonly IHostEnvironment _hostEnvironment;
+    private readonly IConfiguration _configuration;
 
-    public PluginController(ApplicationDbContext dbContext)
+    public PluginController(ApplicationDbContext dbContext, IMapper mapper, IHostEnvironment hostEnvironment, IConfiguration configuration)
     {
         _dbContext = dbContext;
+        _mapper = mapper;
+        _hostEnvironment = hostEnvironment;
+        _configuration = configuration;
     }
 
     [HttpPost]
+    [Authorize(Roles = $"{Roles.Developer}, {Roles.Administrator}")]
     public async Task<IActionResult> Create([FromBody] CreatePluginDto createPluginDto)
     {
         var plugin = new Plugin
@@ -51,11 +59,11 @@ public class PluginController : ControllerBase
             return NotFound("Плагин не найден");
         }
 
-        return Ok(plugin);
+        return Ok(_mapper.Map<PluginDto>(plugin));
     }
 
     [HttpPost("versions/upload")]
-    [Authorize]
+    [Authorize(Roles = $"{Roles.Developer}, {Roles.Administrator}")]
     public async Task<IActionResult> Upload([FromForm] UploadPluginDto uploadDto)
     {
         var plugin = await _dbContext.Plugins.FirstOrDefaultAsync(p => p.PluginId == uploadDto.PluginId);
@@ -64,6 +72,8 @@ public class PluginController : ControllerBase
         {
             return BadRequest("Плагин не найден");
         }
+
+        var fileName = await SaveFile(uploadDto.PluginFile);
         
         var userName = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value!;
 
@@ -71,6 +81,7 @@ public class PluginController : ControllerBase
         {
             Version = uploadDto.Version,
             Description = uploadDto.Description,
+            FileName = fileName,
             Author = userName,
             GitLink = uploadDto.GitLink,
             Beta = uploadDto.Beta
@@ -79,7 +90,25 @@ public class PluginController : ControllerBase
         plugin.PluginVersions.Add(pluginVersion);
         await _dbContext.SaveChangesAsync();
 
-        return Ok(pluginVersion);
+        var dto = _mapper.Map<PluginVersionDto>(pluginVersion);
+        return Ok(dto);
+    }
+
+    [HttpGet("dl/{pluginVersionId}")]
+    public async Task<IActionResult> Download(int pluginVersionId)
+    {
+        var pluginVersion = await _dbContext.PluginVersions.Include(p => p.Plugin).FirstOrDefaultAsync(p => p.PluginVersionId == pluginVersionId);
+
+        if (pluginVersion == null)
+        {
+            return NotFound("Плагин не найден");
+        }
+        
+        var path = Path.Combine(_hostEnvironment.ContentRootPath, "upload", pluginVersion.FileName);
+        var fileName = $"{pluginVersion.Plugin.Name}-{pluginVersion.Version}.zip";
+
+        var content = new FileStream(path, FileMode.Open, FileAccess.Read);
+        return File(content, "application/octet-stream", fileName);
     }
 
     [HttpPost, HttpDelete]
@@ -127,5 +156,24 @@ public class PluginController : ControllerBase
         var currentVersion = plugin.PluginVersions.LastOrDefault();
 
         return Ok(currentVersion);
+    }
+
+    private async Task<string> SaveFile(IFormFile file)
+    {
+        var dir = Path.Combine(_hostEnvironment.ContentRootPath, "upload");
+
+        if (!Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        var fileName = $"{Guid.NewGuid()}.zip";
+        
+        var path = Path.Combine(dir, fileName);
+            
+        await using Stream stream = new FileStream(path, FileMode.Create);
+        await file.CopyToAsync(stream);
+
+        return fileName;
     }
 }
