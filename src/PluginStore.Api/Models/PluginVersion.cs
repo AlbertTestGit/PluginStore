@@ -9,7 +9,7 @@ public class PluginVersion
     public string Description { get; set; }
     public string FileName { get; set; }
     //public List<byte[]> HelpFiles { get; set; }
-    public DateTime PublicationDate { get; set; } = DateTime.Now;
+    public DateTime PublicationDate { get; set; } = DateTime.UtcNow;
     public string Author { get; set; }
     public string GitLink { get; set; }
     public bool Beta { get; set; } = true;

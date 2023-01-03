@@ -138,7 +138,7 @@ public class PluginController : ControllerBase
             return NotFound("Плагин не найден");
         }
 
-        pluginVersion.Deprecated = Request.Method == HttpMethods.Post ? DateTime.Now : null;
+        pluginVersion.Deprecated = Request.Method == HttpMethods.Post ? DateTime.UtcNow : null;
         await _dbContext.SaveChangesAsync();
         return Ok(pluginVersion);
     }
