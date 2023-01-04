@@ -8,7 +8,9 @@ public class PluginVersion
     public string Version { get; set; }
     public string Description { get; set; }
     public string FileName { get; set; }
-    //public List<byte[]> HelpFiles { get; set; }
+    public string? HelpFileEn { get; set; }
+    public string? HelpFileRu { get; set; }
+    public string? HelpFileKz { get; set; }
     public DateTime PublicationDate { get; set; } = DateTime.UtcNow;
     public string Author { get; set; }
     public string GitLink { get; set; }

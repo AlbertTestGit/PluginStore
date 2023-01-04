@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -73,7 +74,7 @@ public class PluginController : ControllerBase
             return BadRequest("Плагин не найден");
         }
 
-        var fileName = await SaveFile(uploadDto.PluginFile);
+        var fileName = await SaveFile(uploadDto.PluginFile, "plugin");
         
         var userName = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value!;
 
@@ -82,6 +83,9 @@ public class PluginController : ControllerBase
             Version = uploadDto.Version,
             Description = uploadDto.Description,
             FileName = fileName,
+            HelpFileEn = uploadDto.HelpFileEn != null ? await SaveFile(uploadDto.HelpFileEn, "txt") : null,
+            HelpFileRu = uploadDto.HelpFileRu != null ? await SaveFile(uploadDto.HelpFileRu, "txt") : null,
+            HelpFileKz = uploadDto.HelpFileKz != null ? await SaveFile(uploadDto.HelpFileKz, "txt") : null,
             Author = userName,
             GitLink = uploadDto.GitLink,
             Beta = uploadDto.Beta
@@ -104,11 +108,58 @@ public class PluginController : ControllerBase
             return NotFound("Плагин не найден");
         }
         
-        var path = Path.Combine(_hostEnvironment.ContentRootPath, "upload", pluginVersion.FileName);
-        var fileName = $"{pluginVersion.Plugin.Name}-{pluginVersion.Version}.zip";
+        var uploadPath = Path.Combine(_hostEnvironment.ContentRootPath, "upload");
+        
+        var fileNameZip = $"{pluginVersion.Plugin.Name}-{pluginVersion.Version}.zip";
 
-        var content = new FileStream(path, FileMode.Open, FileAccess.Read);
-        return File(content, "application/octet-stream", fileName);
+        var pluginFilePath = Path.Combine(uploadPath, pluginVersion.FileName);
+
+        var enHelpFilePath =
+            pluginVersion.HelpFileEn != null ? Path.Combine(uploadPath, pluginVersion.HelpFileEn) : null;
+        var ruHelpFilePath =
+            pluginVersion.HelpFileRu != null ? Path.Combine(uploadPath, pluginVersion.HelpFileRu) : null;
+        var kzHelpFilePath =
+            pluginVersion.HelpFileKz != null ? Path.Combine(uploadPath, pluginVersion.HelpFileKz) : null;
+        
+        byte[] compressedBytes;
+        using (var outStream = new MemoryStream())
+        {
+            using (var archive = new ZipArchive(outStream, ZipArchiveMode.Create, true))
+            {
+                var pluginFileInArchive = archive.CreateEntry("plugin.plugin", CompressionLevel.Optimal);
+                await using (var entryStream = pluginFileInArchive.Open())
+                await using (var fileToCompressStream = new FileStream(pluginFilePath, FileMode.Open, FileAccess.Read))
+                {
+                    await fileToCompressStream.CopyToAsync(entryStream);
+                }
+
+                if (enHelpFilePath != null)
+                {
+                    var enHelpFileInArchive = archive.CreateEntry("help_en.txt", CompressionLevel.Optimal);
+                    await using var entryStream = enHelpFileInArchive.Open();
+                    await using var fileToCompressStream = new FileStream(enHelpFilePath, FileMode.Open, FileAccess.Read);
+                    await fileToCompressStream.CopyToAsync(entryStream);
+                }
+
+                if (ruHelpFilePath != null)
+                {
+                    var ruHelpFileInArchive = archive.CreateEntry("help_ru.txt", CompressionLevel.Optimal);
+                    await using var entryStream = ruHelpFileInArchive.Open();
+                    await using var fileToCompressStream = new FileStream(ruHelpFilePath, FileMode.Open, FileAccess.Read);
+                    await fileToCompressStream.CopyToAsync(entryStream);
+                }
+                
+                if (kzHelpFilePath != null)
+                {
+                    var kzHelpFileInArchive = archive.CreateEntry("help_kz.txt", CompressionLevel.Optimal);
+                    await using var entryStream = kzHelpFileInArchive.Open();
+                    await using var fileToCompressStream = new FileStream(kzHelpFilePath, FileMode.Open, FileAccess.Read);
+                    await fileToCompressStream.CopyToAsync(entryStream);
+                }
+            }
+            compressedBytes = outStream.ToArray();
+        }
+        return File(compressedBytes, "application/zip", fileNameZip);
     }
 
     [HttpPost, HttpDelete]
@@ -158,7 +209,7 @@ public class PluginController : ControllerBase
         return Ok(currentVersion);
     }
 
-    private async Task<string> SaveFile(IFormFile file)
+    private async Task<string> SaveFile(IFormFile file, string extension)
     {
         var dir = Path.Combine(_hostEnvironment.ContentRootPath, "upload");
 
@@ -167,7 +218,7 @@ public class PluginController : ControllerBase
             Directory.CreateDirectory(dir);
         }
 
-        var fileName = $"{Guid.NewGuid()}.zip";
+        var fileName = $"{Guid.NewGuid()}.{extension}";
         
         var path = Path.Combine(dir, fileName);
             
