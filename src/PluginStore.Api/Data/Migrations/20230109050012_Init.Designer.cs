@@ -12,8 +12,8 @@ using PluginStore.Api.Data;
 namespace PluginStore.Api.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20230104055501_AddHelpFilesToModel")]
-    partial class AddHelpFilesToModel
+    [Migration("20230109050012_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -60,9 +60,8 @@ namespace PluginStore.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PluginVersionId"));
 
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("Beta")
                         .HasColumnType("boolean");
@@ -102,6 +101,8 @@ namespace PluginStore.Api.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("PluginVersionId");
+
+                    b.HasIndex("AuthorUserId");
 
                     b.HasIndex("PluginId");
 
@@ -147,11 +148,19 @@ namespace PluginStore.Api.Data.Migrations
 
             modelBuilder.Entity("PluginStore.Api.Models.PluginVersion", b =>
                 {
+                    b.HasOne("PluginStore.Api.Models.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("PluginStore.Api.Models.Plugin", "Plugin")
                         .WithMany("PluginVersions")
                         .HasForeignKey("PluginId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Author");
 
                     b.Navigation("Plugin");
                 });

@@ -40,6 +40,21 @@ public class PluginVersionController : ControllerBase
         return Ok(_mapper.Map<PluginVersionDto>(pluginVersion));
     }
 
+    [HttpGet("versions/{pluginId}/current")]
+    public async Task<IActionResult> CurrentVersion(int pluginId)
+    {
+        var plugin = await _dbContext.Plugins.Include(v => v.PluginVersions).FirstOrDefaultAsync(p => p.PluginId == pluginId);
+
+        if (plugin == null)
+        {
+            return NotFound("Плагин не найден");
+        }
+        
+        var currentVersion = plugin.PluginVersions.Where(p => (p.Deprecated == null) && (p.Beta == false)).LastOrDefault();
+
+        return Ok(currentVersion);
+    }
+
     [HttpPost("upload")]
     [Authorize(Roles = $"{Roles.Developer}, {Roles.Administrator}")]
     public async Task<IActionResult> Upload([FromForm] UploadPluginDto uploadDto)
@@ -53,7 +68,7 @@ public class PluginVersionController : ControllerBase
 
         var fileName = await SaveFile(uploadDto.PluginFile, "plugin");
         
-        var userId = Guid.Parse(User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value!);
+        var userId = Guid.Parse(User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!);
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == userId);
 
         var pluginVersion = new PluginVersion
@@ -145,7 +160,7 @@ public class PluginVersionController : ControllerBase
     public async Task<IActionResult> UpdatePluginVersion([FromForm] UpdatePluginVersionDto updatePluginVersionDto)
     {
         var pluginVersion =
-            await _dbContext.PluginVersions.FirstOrDefaultAsync(p =>
+            await _dbContext.PluginVersions.Include(u => u.Author).FirstOrDefaultAsync(p =>
                 p.PluginVersionId == updatePluginVersionDto.PluginVersionId);
 
         if (pluginVersion == null)
@@ -154,7 +169,7 @@ public class PluginVersionController : ControllerBase
         }
         
         var userId = Guid.Parse(User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!);
-        var userRole = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value!;
+        var userRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value!;
         
         if (pluginVersion.Author.UserId != userId && userRole != Roles.Administrator)
         {

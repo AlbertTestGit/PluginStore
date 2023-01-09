@@ -54,8 +54,11 @@ namespace PluginStore.Api.Data.Migrations
                     Version = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     FileName = table.Column<string>(type: "text", nullable: false),
+                    HelpFileEn = table.Column<string>(type: "text", nullable: true),
+                    HelpFileRu = table.Column<string>(type: "text", nullable: true),
+                    HelpFileKz = table.Column<string>(type: "text", nullable: true),
                     PublicationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Author = table.Column<string>(type: "text", nullable: false),
+                    AuthorUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     GitLink = table.Column<string>(type: "text", nullable: false),
                     Beta = table.Column<bool>(type: "boolean", nullable: false),
                     Deprecated = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -70,7 +73,18 @@ namespace PluginStore.Api.Data.Migrations
                         principalTable: "Plugins",
                         principalColumn: "PluginId",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PluginVersions_Users_AuthorUserId",
+                        column: x => x.AuthorUserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PluginVersions_AuthorUserId",
+                table: "PluginVersions",
+                column: "AuthorUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PluginVersions_PluginId",
@@ -91,10 +105,10 @@ namespace PluginStore.Api.Data.Migrations
                 name: "PluginVersions");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Plugins");
 
             migrationBuilder.DropTable(
-                name: "Plugins");
+                name: "Users");
         }
     }
 }

@@ -1,5 +1,3 @@
-using System.IO.Compression;
-using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -79,21 +77,5 @@ public class PluginController : ControllerBase
         }
 
         return Ok(_mapper.Map<PluginDto>(plugin));
-    }
-
-    [HttpGet("versions/{pluginId}/current")]
-    public async Task<IActionResult> CurrentVersion(int pluginId)
-    {
-        var plugin = await _dbContext.Plugins.Include(v => v.PluginVersions).FirstOrDefaultAsync(p => p.PluginId == pluginId);
-
-        if (plugin == null)
-        {
-            return NotFound("Плагин не найден");
-        }
-
-        // TODO: нужно учитовать beta и deprecated
-        var currentVersion = plugin.PluginVersions.LastOrDefault();
-
-        return Ok(currentVersion);
     }
 }

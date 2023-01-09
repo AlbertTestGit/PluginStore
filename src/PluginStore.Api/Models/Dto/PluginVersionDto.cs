@@ -6,7 +6,7 @@ public class PluginVersionDto
     public string Version { get; set; }
     public string Description { get; set; }
     // TODO: нужно придумать другой способ генерации ссылки
-    public string FileUrl => $"http://localhost:5100/api/plugin-versions/dl/{PluginVersionId}";
+    public string FileUrl => $"http://localhost:5100/api/plugin-versions/download/{PluginVersionId}";
     public DateTime PublicationDate { get; set; } = DateTime.Now;
     public string Author { get; set; }
     public string GitLink { get; set; }
