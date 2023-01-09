@@ -28,7 +28,8 @@ public class PluginController : ControllerBase
         var plugin = new Plugin
         {
             Name = createPluginDto.Name,
-            PetrelVersion = createPluginDto.PetrelVersion
+            PetrelVersion = createPluginDto.PetrelVersion,
+            ProductKey = Guid.NewGuid().ToString()
         };
 
         _dbContext.Plugins.Add(plugin);
