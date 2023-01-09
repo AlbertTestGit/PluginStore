@@ -12,7 +12,7 @@ public class PluginVersion
     public string? HelpFileRu { get; set; }
     public string? HelpFileKz { get; set; }
     public DateTime PublicationDate { get; set; } = DateTime.UtcNow;
-    public string Author { get; set; }
+    public User Author { get; set; }
     public string GitLink { get; set; }
     public bool Beta { get; set; } = true;
     public DateTime? Deprecated { get; set; }
